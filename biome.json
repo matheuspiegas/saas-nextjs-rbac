@@ -27,5 +27,10 @@
       "bracketSpacing": true
     }
   },
-  "html": { "formatter": { "indentScriptAndStyle": false, "selfCloseVoidElements": "always" } }
+  "html": {
+    "formatter": {
+      "indentScriptAndStyle": false,
+      "selfCloseVoidElements": "always"
+    }
+  }
 }
