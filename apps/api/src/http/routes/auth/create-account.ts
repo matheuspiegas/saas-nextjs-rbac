@@ -1,14 +1,17 @@
-import { hash } from "bcryptjs";
-import type { FastifyInstance } from "fastify";
-import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { hash } from 'bcryptjs'
+import type { FastifyInstance } from 'fastify'
+import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { z } from 'zod'
+import { prisma } from '@/lib/prisma'
+import { BadRequestError } from '../_errors/bad-request-error'
 
 export async function createAccount(app: FastifyInstance) {
   app.withTypeProvider<ZodTypeProvider>().post(
-    "/users",
+    '/users',
     {
       schema: {
+        summary: 'Create a new user account',
+        tags: ['Auth'],
         body: z.object({
           name: z.string(),
           email: z.email(),
@@ -17,26 +20,42 @@ export async function createAccount(app: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      const { name, email, password } = req.body;
+      const { name, email, password } = req.body
 
       const userWithSameEmail = await prisma.user.findUnique({
         where: { email },
-      });
+      })
       if (userWithSameEmail) {
-        return reply.status(400).send({ message: "Email already in use." });
+        throw new BadRequestError('Email already in use.')
       }
 
-      const passwordHash = await hash(password, 6);
+      const [, domain] = email.split('@')
+
+      const autoJoinOrganization = await prisma.organization.findFirst({
+        where: {
+          domain,
+          shouldAttachUsersByDomain: true,
+        },
+      })
+
+      const passwordHash = await hash(password, 6)
 
       await prisma.user.create({
         data: {
           name,
           email,
           passwordHash,
+          member_on: autoJoinOrganization
+            ? {
+                create: {
+                  organizationId: autoJoinOrganization.id,
+                },
+              }
+            : undefined,
         },
-      });
+      })
 
-      reply.status(201).send();
-    },
-  );
+      reply.status(201).send()
+    }
+  )
 }
