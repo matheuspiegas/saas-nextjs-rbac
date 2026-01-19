@@ -2,6 +2,7 @@ import fastifyCors from '@fastify/cors'
 import fastifyJwt from '@fastify/jwt'
 import fastifySwagger from '@fastify/swagger'
 import fastifySwaggerUi from '@fastify/swagger-ui'
+import { env } from '@saas/env'
 import fastify from 'fastify'
 import {
   jsonSchemaTransform,
@@ -31,6 +32,15 @@ app.register(fastifySwagger, {
       description: 'Fullstack Saas application with Next.js, Fastify and Prisma',
       version: '1.0.0',
     },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
     servers: [],
   },
   transform: jsonSchemaTransform,
@@ -41,7 +51,7 @@ app.register(fastifySwaggerUi, {
 
 app.register(fastifyCors)
 app.register(fastifyJwt, {
-  secret: 'secret-key',
+  secret: env.JWT_SECRET,
 })
 
 // Routes
