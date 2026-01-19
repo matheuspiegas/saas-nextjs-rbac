@@ -1,46 +1,51 @@
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import z from 'zod'
+import { auth } from '@/http/middlewares/auth'
 import { prisma } from '@/lib/prisma'
 import { BadRequestError } from '../_errors/bad-request-error'
 
 export async function getProfile(app: FastifyInstance) {
-  app.withTypeProvider<ZodTypeProvider>().get(
-    '/profile',
-    {
-      schema: {
-        summary: 'Get authenticated user profile',
-        tags: ['Auth'],
-        response: {
-          200: z.object({
-            user: z.object({
-              id: z.uuid(),
-              email: z.email(),
-              name: z.string().nullable(),
-              avatarUrl: z.url().nullable(),
+  app
+    .withTypeProvider<ZodTypeProvider>()
+    .register(auth)
+    .get(
+      '/profile',
+      {
+        schema: {
+          summary: 'Get authenticated user profile',
+          tags: ['Auth'],
+          response: {
+            200: z.object({
+              user: z.object({
+                id: z.uuid(),
+                email: z.email(),
+                name: z.string().nullable(),
+                avatarUrl: z.url().nullable(),
+              }),
             }),
-          }),
-          400: z.undefined(),
+            400: z.undefined(),
+          },
         },
       },
-    },
-    async (req, reply) => {
-      const { sub } = await req.jwtVerify<{ sub: string }>()
-      const user = await prisma.user.findUnique({
-        where: { id: sub },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatarUrl: true,
-        },
-      })
+      async (req, reply) => {
+        const userId = await req.getCurrentUserId()
 
-      if (!user) {
-        throw new BadRequestError('User not found')
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        })
+
+        if (!user) {
+          throw new BadRequestError('User not found')
+        }
+
+        return reply.send({ user })
       }
-
-      return reply.send({ user })
-    }
-  )
+    )
 }
