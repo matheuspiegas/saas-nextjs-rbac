@@ -1,9 +1,4 @@
-import {
-  AbilityBuilder,
-  type CreateAbility,
-  createMongoAbility,
-  type MongoAbility,
-} from '@casl/ability'
+import { AbilityBuilder, type CreateAbility, createMongoAbility, type MongoAbility } from '@casl/ability'
 import z from 'zod'
 import type { User } from './models/user'
 import { permissions } from './permissions'
@@ -16,6 +11,7 @@ import { userSubjectSchema } from './subjects/user'
 export * from './models/organization'
 export * from './models/project'
 export * from './models/user'
+export * from './roles'
 
 const appAbilitiesSchema = z.union([
   projectSubjectSchema,
@@ -34,8 +30,7 @@ export const createAppAbility = createMongoAbility as CreateAbility<AppAbility>
 export function defineAbilityFor(user: User) {
   const builder = new AbilityBuilder(createAppAbility)
 
-  if (typeof permissions[user.role] !== 'function')
-    throw new Error(`Permissions for role ${user.role} are not found.`)
+  if (typeof permissions[user.role] !== 'function') throw new Error(`Permissions for role ${user.role} are not found.`)
 
   permissions[user.role](user, builder)
 
